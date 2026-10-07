@@ -1,0 +1,47 @@
+
+upstream avaliacao_front {
+  server sistema_avaliacao_frontend:3000;
+}
+
+server {
+  listen 80;
+  server_name avaliacao.rededompedro.com.br;
+
+  location ^~ /.well-known/acme-challenge/ {
+    default_type "text/plain";
+    rewrite /.well-known/acme-challenge/(.*) /$1 break;
+    root /app/nginx/acme-challenge;
+    break;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+server {
+  listen 443 ssl;
+  server_name avaliacao.rededompedro.com.br;
+
+  ssl_certificate     /etc/nginx/selfsigned/avaliacao.crt;
+  ssl_certificate_key /etc/nginx/selfsigned/avaliacao.key;
+
+  location / {
+    proxy_pass http://avaliacao_front;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /api/ {
+    proxy_pass http://avaliacao-api:3000/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
